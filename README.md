@@ -67,6 +67,11 @@ Uses the median absolute derivative as a simple and effective heuristic for flat
 It is assumed that disconnected channel is mainly compose by 0s. If noise was present further refinement should be done.
 
 
+## Efficiency:
+
+The full pipelinetime 0.1431 seconds for the given test set, which processes 30 seconds of ECG x 6 channels (in fact only 5 becasue of disconnected one). Code can esily scale in terms of efficiency if parallel computing is used s it channel could be procesed in an independent core.
+
+
 
 
 
