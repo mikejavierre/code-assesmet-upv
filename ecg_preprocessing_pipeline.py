@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import signal
 from scipy.signal import iirnotch, butter, filtfilt, firwin,medfilt
-
+import logging
 
 
 def remove_spikes_adaptive_power(ecg, window_size=1000, std_thresh=10):
@@ -117,48 +117,56 @@ def detect_disconnected_channel(ecg, threshold=1):
 
 
 
-def verify_pipeline(ecg,fs):
+logger = logging.getLogger(__name__)
+
+def verify_pipeline(ecg_raw, fs):
     """
     Verify the preprocessing pipeline for ECG data.
     Parameters:
-        ecg (np.ndarray): ECG array (channels x samples)
+        ecg_raw (np.ndarray): ECG array (channels x samples)
+        fs (int): Sampling frequency
     Returns:
         np.ndarray: Preprocessed ECG signal
     """
 
-    # Step-by-step processing
-    disconnected=detect_disconnected_channel(ecg)
+    logger.info("Starting ECG preprocessing pipeline.")
+
+    # Step 1: Detect disconnected channels
+    disconnected = detect_disconnected_channel(ecg_raw)
 
     if disconnected.any():
-        print("Warning: Some channels appear to be disconnected.")
-  
         disconnected_channels = np.where(disconnected)[0]
-        print(f"Disconnected channels: {disconnected_channels}, removing them.")
-      
-        #drop channel
+        logger.warning("Some channels appear to be disconnected.")
+        logger.warning(f"Removing disconnected channels: {disconnected_channels.tolist()}")
         ecg_raw = np.delete(ecg_raw, disconnected_channels, axis=0)
-                
+    else:
+        logger.info("No disconnected channels detected.")
 
+    # Step 2: Remove spikes using adaptive power
+    logger.info("Removing spikes...")
     ecg = remove_spikes_adaptive_power(ecg_raw)
 
-
+    # Step 3: Apply notch filter
+    logger.info("Applying notch filter...")
     ecg = notch_filter(ecg, fs)
 
-
-
+    # Step 4: Apply low-pass filter
+    logger.info("Applying low-pass filter...")
     ecg = low_pass_filter(ecg, fs)
 
-
+    # Step 5: Baseline wander removal
+    logger.info("Removing baseline wander...")
     ecg = baseline_wander_removal(ecg, fs)
 
-    #insert the removed channels
+    # Step 6: Reinsert disconnected channels as zeros
     if disconnected.any():
         ecg = np.insert(ecg, disconnected_channels, 0, axis=0)
-        print(f"Inserted {len(disconnected_channels)} disconnected channels back into the data.")
+        logger.info(f"Reinserted {len(disconnected_channels)} disconnected channels as zeros.")
 
+    logger.info("ECG preprocessing pipeline completed.")
 
-   
     return ecg
+
    
     
    
